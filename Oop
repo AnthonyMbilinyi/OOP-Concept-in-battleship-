@@ -1,0 +1,171 @@
+#include <iostream>
+#include <vector>
+#include <string>
+#include <random>
+#include <algorithm>
+
+using namespace std;
+
+// Define a class to represent a single ship
+class Ship {
+public:
+    Ship(int size) : size(size), health(size) {}
+
+    int getSize() const { return size; }
+    int getHealth() const { return health; }
+    void hit() { if (health > 0) health--; }
+    bool isSunk() const { return health == 0; }
+
+private:
+    int size;
+    int health;
+};
+
+// Define a class to represent a player's game board
+class Board {
+public:
+    Board() {
+        for (int i = 0; i < 10; ++i) {
+            vector<char> row(10, '~'); // '~' represents empty sea
+            grid.push_back(row);
+        }
+    }
+
+    void placeShip(Ship ship, int row, int col, bool isVertical) {
+        if (isVertical) {
+            for (int i = 0; i < ship.getSize(); ++i) {
+                if (row + i >= 10) return; // Out of bounds
+                grid[row + i][col] = 'S'; // 'S' represents ship
+            }
+        } else {
+            for (int i = 0; i < ship.getSize(); i++) {
+                if (col + i >= 10) return; // Out of bounds
+                grid[row][col + i] = 'S';
+            }
+        }
+    }
+
+    void fire(int row, int col) {
+        if (grid[row][col] == 'S') {
+            grid[row][col] = 'X'; // 'X' represents hit
+        } else if (grid[row][col] == '~') {
+            grid[row][col] = '.'; // '.' represents miss
+        }
+    }
+
+    void printBoard() const {
+        cout << "   ";
+        for (int i = 0; i < 10; ++i) {
+            cout << i << " ";
+        }
+        cout << endl;
+        for (int i = 0; i < 10; ++i) {
+            cout << i << "  ";
+            for (int j = 0; j < 10; ++j) {
+                cout << grid[i][j] << " ";
+            }
+            cout << endl;
+        }
+    }
+
+private:
+    vector<vector<char>> grid;
+};
+
+// Function to get a random number within a range
+int getRandomNumber(int min, int max) {
+    random_device rd;
+    mt19937 gen(rd());
+    uniform_int_distribution<> dist(min, max);
+    return dist(gen);
+}
+
+// Function to check if a ship placement is valid
+bool isValidPlacement(Board& board, Ship ship, int row, int col, bool isVertical) {
+    if (isVertical) {
+        for (int i = 0; i < ship.getSize(); ++i) {
+            if (row + i >= 10) return false; // Out of bounds
+            if (grid[row + i][col] != '~') return false; // Collision
+        }
+    } else {
+        for (int i = 0; i < ship.getSize(); ++i) {
+            if (col + i >= 10) return false; // Out of bounds
+            if (grid[row][col + i] != '~') return false; // Collision
+        }
+    }
+    return true;
+}
+
+// Function to get player's coordinates
+void getPlayerCoordinates(int& row, int& col) {
+    cout << "Enter row (0-9): ";
+    cin >> row;
+    cout << "Enter column (0-9): ";
+    cin >> col;
+}
+
+// Function to play a single round of the game
+void playRound(Board& playerBoard, Board& enemyBoard, Ship& enemyShip) {
+    int row, col;
+
+    // Player's turn
+    playerBoard.printBoard();
+    getPlayerCoordinates(row, col);
+    enemyBoard.fire(row, col);
+
+    // Check if the ship is sunk
+    if (enemyShip.isSunk()) {
+        cout << "You sunk the enemy ship!" << endl;
+    }
+
+    // Enemy's turn
+    row = getRandomNumber(0, 9);
+    col = getRandomNumber(0, 9);
+    playerBoard.fire(row, col);
+}
+
+int main() {
+    // Create ships
+    Ship playerShip(5); // Player's ship
+    Ship enemyShip(5); // Enemy's ship
+
+    // Create boards
+    Board playerBoard;
+    Board enemyBoard;
+
+    // Place player's ship
+    int row, col;
+    bool isVertical;
+    cout << "Place your ship (vertical or horizontal): ";
+    string orientation;
+    cin >> orientation;
+    isVertical = (orientation == "vertical");
+    do {
+        cout << "Enter row (0-9): ";
+        cin >> row;
+        cout << "Enter column (0-9): ";
+        cin >> col;
+    } while (!isValidPlacement(playerBoard, playerShip, row, col, isVertical));
+    playerBoard.placeShip(playerShip, row, col, isVertical);
+
+    // Place enemy's ship randomly
+    do {
+        row = getRandomNumber(0, 9);
+        col = getRandomNumber(0, 9);
+        isVertical = getRandomNumber(0, 1) == 0; // Randomly choose orientation
+    } while (!isValidPlacement(enemyBoard, enemyShip, row, col, isVertical));
+    enemyBoard.placeShip(enemyShip, row, col, isVertical);
+
+    // Game loop
+    while (!playerShip.isSunk() && !enemyShip.isSunk()) {
+        playRound(playerBoard, enemyBoard, enemyShip);
+    }
+
+    if (playerShip.isSunk()) {
+        cout << "You lost!" << endl;
+    } else {
+        cout << "You won!" << endl;
+    }
+
+    return 0;
+}
